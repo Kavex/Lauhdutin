@@ -259,6 +259,7 @@ end
 				DisplayMessage('Missing Steam UserDataID#CRLF#or invalid Steam path')
 			else
 				for sUDID in S_STEAM_USER_DATA_ID:gmatch('([^;]+)') do
+					sUDID = Trim(sUDID)
 					local tLocalConfigApps = ParseVDFFile(S_PATH_STEAM .. 'userdata\\' .. sUDID ..'\\config\\localconfig.vdf')
 					if tLocalConfigApps == nil then
 						DisplayMessage('Invalid Steam UserDataID#CRLF#and/or Steam path')
