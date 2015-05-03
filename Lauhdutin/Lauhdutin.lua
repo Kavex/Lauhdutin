@@ -258,138 +258,140 @@ end
 			if S_STEAM_USER_DATA_ID == nil or S_STEAM_USER_DATA_ID == '' then
 				DisplayMessage('Missing Steam UserDataID#CRLF#or invalid Steam path')
 			else
-				local tLocalConfigApps = ParseVDFFile(S_PATH_STEAM .. 'userdata\\' .. S_STEAM_USER_DATA_ID ..'\\config\\localconfig.vdf')
-				if tLocalConfigApps == nil then
-					DisplayMessage('Invalid Steam UserDataID#CRLF#and/or Steam path')
-				else
-					local tLocalConfigAppTickets = RecursiveTableSearch(tLocalConfigApps, S_VDF_KEY_APP_TICKETS)
-					tLocalConfigApps = RecursiveTableSearch(tLocalConfigApps, S_VDF_KEY_STEAM)[S_VDF_KEY_APPS]
-					local tSharedConfigApps = ParseVDFFile(S_PATH_STEAM .. 'userdata\\' .. S_STEAM_USER_DATA_ID .. '\\7\\remote\\sharedconfig.vdf')
-					tSharedConfigApps = RecursiveTableSearch(tSharedConfigApps, S_VDF_KEY_STEAM)[S_VDF_KEY_APPS]
-					local tExceptions = ParseVDFFile(S_PATH_RESOURCES .. S_INCLUDE_FILE_EXCEPTIONS)
-					if tLocalConfigApps ~= nil and tLocalConfigAppTickets ~= nil and tSharedConfigApps ~= nil then
-						-- Steam games.
-						for i = 1, #tSteamLibraryPaths do
-							for sAppID, tTable in pairs(tLocalConfigAppTickets) do
-								if tExceptions[sAppID] == nil then
-									local tGame = {}
-									tGame[S_VDF_KEY_STEAM] = 'true'
-									tGame[S_VDF_KEY_APPID] = sAppID
-									if tLocalConfigApps[sAppID] ~= nil and tLocalConfigApps[sAppID][S_VDF_KEY_LAST_PLAYED] ~= nil then
-										tGame[S_VDF_KEY_LAST_PLAYED] = tLocalConfigApps[sAppID][S_VDF_KEY_LAST_PLAYED]
-										local tAppManifest = ParseVDFFile(tSteamLibraryPaths[i] .. 'SteamApps\\appmanifest_' .. sAppID .. '.acf')
-										if tAppManifest ~= nil then
-											tGame[S_VDF_KEY_NAME] = tAppManifest[S_VDF_KEY_APP_STATE][S_VDF_KEY_NAME]
-											if tGame[S_VDF_KEY_NAME] == nil then
-												tGame[S_VDF_KEY_NAME] = tAppManifest[S_VDF_KEY_APP_STATE][S_VDF_KEY_USER_CONFIG][S_VDF_KEY_NAME]
-											end
-											local tGameSharedConfig = RecursiveTableSearch(tSharedConfigApps, sAppID)
-											if tGameSharedConfig ~= nil then
-												tGame[S_VDF_KEY_TAGS] = RecursiveTableSearch(tGameSharedConfig, S_VDF_KEY_TAGS)
-												tGame[S_VDF_KEY_HIDDEN] = tGameSharedConfig[S_VDF_KEY_HIDDEN]
-											end
-											tGameSharedConfig = nil
-											if tGame[S_VDF_KEY_HIDDEN] == nil or tGame[S_VDF_KEY_HIDDEN] == '0' then
-												table.insert(tGames, tGame)
-												if BannerExists(tGame[S_VDF_KEY_APPID]) == nil then
-													table.insert(T_LOGO_QUEUE, tGame[S_VDF_KEY_APPID])
+				for sUDID in S_STEAM_USER_DATA_ID:gmatch('([^;]+)') do
+					local tLocalConfigApps = ParseVDFFile(S_PATH_STEAM .. 'userdata\\' .. sUDID ..'\\config\\localconfig.vdf')
+					if tLocalConfigApps == nil then
+						DisplayMessage('Invalid Steam UserDataID#CRLF#and/or Steam path')
+					else
+						local tLocalConfigAppTickets = RecursiveTableSearch(tLocalConfigApps, S_VDF_KEY_APP_TICKETS)
+						tLocalConfigApps = RecursiveTableSearch(tLocalConfigApps, S_VDF_KEY_STEAM)[S_VDF_KEY_APPS]
+						local tSharedConfigApps = ParseVDFFile(S_PATH_STEAM .. 'userdata\\' .. sUDID .. '\\7\\remote\\sharedconfig.vdf')
+						tSharedConfigApps = RecursiveTableSearch(tSharedConfigApps, S_VDF_KEY_STEAM)[S_VDF_KEY_APPS]
+						local tExceptions = ParseVDFFile(S_PATH_RESOURCES .. S_INCLUDE_FILE_EXCEPTIONS)
+						if tLocalConfigApps ~= nil and tLocalConfigAppTickets ~= nil and tSharedConfigApps ~= nil then
+							-- Steam games.
+							for i = 1, #tSteamLibraryPaths do
+								for sAppID, tTable in pairs(tLocalConfigAppTickets) do
+									if tExceptions[sAppID] == nil then
+										local tGame = {}
+										tGame[S_VDF_KEY_STEAM] = 'true'
+										tGame[S_VDF_KEY_APPID] = sAppID
+										if tLocalConfigApps[sAppID] ~= nil and tLocalConfigApps[sAppID][S_VDF_KEY_LAST_PLAYED] ~= nil then
+											tGame[S_VDF_KEY_LAST_PLAYED] = tLocalConfigApps[sAppID][S_VDF_KEY_LAST_PLAYED]
+											local tAppManifest = ParseVDFFile(tSteamLibraryPaths[i] .. 'SteamApps\\appmanifest_' .. sAppID .. '.acf')
+											if tAppManifest ~= nil then
+												tGame[S_VDF_KEY_NAME] = tAppManifest[S_VDF_KEY_APP_STATE][S_VDF_KEY_NAME]
+												if tGame[S_VDF_KEY_NAME] == nil then
+													tGame[S_VDF_KEY_NAME] = tAppManifest[S_VDF_KEY_APP_STATE][S_VDF_KEY_USER_CONFIG][S_VDF_KEY_NAME]
+												end
+												local tGameSharedConfig = RecursiveTableSearch(tSharedConfigApps, sAppID)
+												if tGameSharedConfig ~= nil then
+													tGame[S_VDF_KEY_TAGS] = RecursiveTableSearch(tGameSharedConfig, S_VDF_KEY_TAGS)
+													tGame[S_VDF_KEY_HIDDEN] = tGameSharedConfig[S_VDF_KEY_HIDDEN]
+												end
+												tGameSharedConfig = nil
+												if tGame[S_VDF_KEY_HIDDEN] == nil or tGame[S_VDF_KEY_HIDDEN] == '0' then
+													table.insert(tGames, tGame)
+													if BannerExists(tGame[S_VDF_KEY_APPID]) == nil then
+														table.insert(T_LOGO_QUEUE, tGame[S_VDF_KEY_APPID])
+													end
 												end
 											end
 										end
+										tGame = nil
 									end
-									tGame = nil
 								end
 							end
-						end
 
-						-- Non-Steam games that have been added to the Steam library.
-						local sShortcuts = ''
-						-- Convert from hexadecimal to UTF8. Replace control characters with "|".
-						local fShortcuts = io.open((S_PATH_STEAM .. 'userdata\\' .. S_STEAM_USER_DATA_ID ..'\\config\\shortcuts.vdf'), 'rb')
-						if fShortcuts ~= nil then
-							while true do
-								local sHex = fShortcuts:read(5)
-								if sHex == nil then
-									fShortcuts:close()
-									break
-								else
-									sShortcuts = sShortcuts .. string.gsub(sHex, '%c', '|')
+							-- Non-Steam games that have been added to the Steam library.
+							local sShortcuts = ''
+							-- Convert from hexadecimal to UTF8. Replace control characters with "|".
+							local fShortcuts = io.open((S_PATH_STEAM .. 'userdata\\' .. sUDID ..'\\config\\shortcuts.vdf'), 'rb')
+							if fShortcuts ~= nil then
+								while true do
+									local sHex = fShortcuts:read(5)
+									if sHex == nil then
+										fShortcuts:close()
+										break
+									else
+										sShortcuts = sShortcuts .. string.gsub(sHex, '%c', '|')
+									end
 								end
-							end
-							local tSteamShortcuts = ParseVDFFile(S_PATH_RESOURCES .. S_INCLUDE_FILE_STEAM_SHORTCUTS)
-							local nSteamShortcutsBefore = 0
-							for k,v in pairs(tSteamShortcuts) do
-								nSteamShortcutsBefore = nSteamShortcutsBefore + 1
-							end
-							for sName, sPath, sTags in string.gmatch(sShortcuts, '|appname|([^|]+)||exe|\"(.-)\"|.-|tags|(.-)||||') do
-								local nIndex = 0
-								local nMaxIndex = 0
-								if tSteamShortcuts ~= nil then
-									for sKey, tValue in pairs(tSteamShortcuts) do
-										local nKey = tonumber(sKey)
-										if tValue[S_VDF_KEY_NAME] == sName then
-											nIndex = nKey
-											break
-										elseif nKey >= nMaxIndex then
-											nMaxIndex = nKey + 1
+								local tSteamShortcuts = ParseVDFFile(S_PATH_RESOURCES .. S_INCLUDE_FILE_STEAM_SHORTCUTS)
+								local nSteamShortcutsBefore = 0
+								for k,v in pairs(tSteamShortcuts) do
+									nSteamShortcutsBefore = nSteamShortcutsBefore + 1
+								end
+								for sName, sPath, sTags in string.gmatch(sShortcuts, '|appname|([^|]+)||exe|\"(.-)\"|.-|tags|(.-)||||') do
+									local nIndex = 0
+									local nMaxIndex = 0
+									if tSteamShortcuts ~= nil then
+										for sKey, tValue in pairs(tSteamShortcuts) do
+											local nKey = tonumber(sKey)
+											if tValue[S_VDF_KEY_NAME] == sName then
+												nIndex = nKey
+												break
+											elseif nKey >= nMaxIndex then
+												nMaxIndex = nKey + 1
+											end
 										end
 									end
-								end
-								local tGame = {}
-								tGame[S_VDF_KEY_APPID] = sName
-								tGame[S_VDF_KEY_NAME] = sName
-								tGame[S_VDF_KEY_PATH] = sPath
-								tGame[S_VDF_KEY_STEAM_SHORTCUT] = 'true'
-								tGame[S_VDF_KEY_LAST_PLAYED] = '0'
-								local tTags = {}
-								local nTags = 0
-								for sTag in string.gmatch(sTags, '|+%d+|([^|]+)') do
-									tTags[tostring(nTags)] = sTag
-									nTags = nTags + 1
-								end
-								if nTags > 0 then
-									tGame[S_VDF_KEY_TAGS] = tTags
-								end
-								local sMaxIndex = tostring(nMaxIndex)
-								if tSteamShortcuts[sMaxIndex] == nil then
-									local tLocalGame = {}
-									tLocalGame[S_VDF_KEY_NAME] = sName
-									tLocalGame[S_VDF_KEY_LAST_PLAYED] = '0'
-									tSteamShortcuts[sMaxIndex] = tLocalGame
-								else
-									local sIndex = tostring(nIndex)
-									tGame[S_VDF_KEY_LAST_PLAYED] = tSteamShortcuts[sIndex][S_VDF_KEY_LAST_PLAYED]
-									if tSteamShortcuts[sIndex][S_VDF_KEY_PATH] ~= nil then
-										tGame[S_VDF_KEY_PATH] = tSteamShortcuts[sIndex][S_VDF_KEY_PATH]
+									local tGame = {}
+									tGame[S_VDF_KEY_APPID] = sName
+									tGame[S_VDF_KEY_NAME] = sName
+									tGame[S_VDF_KEY_PATH] = sPath
+									tGame[S_VDF_KEY_STEAM_SHORTCUT] = 'true'
+									tGame[S_VDF_KEY_LAST_PLAYED] = '0'
+									local tTags = {}
+									local nTags = 0
+									for sTag in string.gmatch(sTags, '|+%d+|([^|]+)') do
+										tTags[tostring(nTags)] = sTag
+										nTags = nTags + 1
 									end
-									if tSteamShortcuts[sIndex][S_VDF_KEY_STEAM] ~= nil then
-										tGame[S_VDF_KEY_STEAM] = tSteamShortcuts[sIndex][S_VDF_KEY_STEAM]
+									if nTags > 0 then
+										tGame[S_VDF_KEY_TAGS] = tTags
 									end
-
-									if tSteamShortcuts[sIndex][S_VDF_KEY_APPID] ~= nil then
-										tGame[S_VDF_KEY_APPID] = tSteamShortcuts[sIndex][S_VDF_KEY_APPID]
-									end
-
-								end
-								if BannerExists(tGame[S_VDF_KEY_APPID]) == nil then
-									if tonumber(tGame[S_VDF_KEY_APPID]) ~= nil then
-										table.insert(T_LOGO_QUEUE, tGame[S_VDF_KEY_APPID])
-										table.insert(tGames, tGame)
+									local sMaxIndex = tostring(nMaxIndex)
+									if tSteamShortcuts[sMaxIndex] == nil then
+										local tLocalGame = {}
+										tLocalGame[S_VDF_KEY_NAME] = sName
+										tLocalGame[S_VDF_KEY_LAST_PLAYED] = '0'
+										tSteamShortcuts[sMaxIndex] = tLocalGame
 									else
-										DisplayMessage('Missing banner#CRLF#' .. tGame[S_VDF_KEY_APPID] .. '#CRLF#for#CRLF#' .. tGame[S_VDF_KEY_NAME])
+										local sIndex = tostring(nIndex)
+										tGame[S_VDF_KEY_LAST_PLAYED] = tSteamShortcuts[sIndex][S_VDF_KEY_LAST_PLAYED]
+										if tSteamShortcuts[sIndex][S_VDF_KEY_PATH] ~= nil then
+											tGame[S_VDF_KEY_PATH] = tSteamShortcuts[sIndex][S_VDF_KEY_PATH]
+										end
+										if tSteamShortcuts[sIndex][S_VDF_KEY_STEAM] ~= nil then
+											tGame[S_VDF_KEY_STEAM] = tSteamShortcuts[sIndex][S_VDF_KEY_STEAM]
+										end
+
+										if tSteamShortcuts[sIndex][S_VDF_KEY_APPID] ~= nil then
+											tGame[S_VDF_KEY_APPID] = tSteamShortcuts[sIndex][S_VDF_KEY_APPID]
+										end
+
 									end
-								else
-									table.insert(tGames, tGame)
+									if BannerExists(tGame[S_VDF_KEY_APPID]) == nil then
+										if tonumber(tGame[S_VDF_KEY_APPID]) ~= nil then
+											table.insert(T_LOGO_QUEUE, tGame[S_VDF_KEY_APPID])
+											table.insert(tGames, tGame)
+										else
+											DisplayMessage('Missing banner#CRLF#' .. tGame[S_VDF_KEY_APPID] .. '#CRLF#for#CRLF#' .. tGame[S_VDF_KEY_NAME])
+										end
+									else
+										table.insert(tGames, tGame)
+									end
 								end
+								local nSteamShortcutsAfter = 0
+								for k,v in pairs(tSteamShortcuts) do
+									nSteamShortcutsAfter = nSteamShortcutsAfter + 1
+								end
+								if nSteamShortcutsBefore ~= nSteamShortcutsAfter then
+									SerializeTableAsVDFFile(tSteamShortcuts, (S_PATH_RESOURCES .. S_INCLUDE_FILE_STEAM_SHORTCUTS))
+								end
+								tSteamShortcuts = nil
 							end
-							local nSteamShortcutsAfter = 0
-							for k,v in pairs(tSteamShortcuts) do
-								nSteamShortcutsAfter = nSteamShortcutsAfter + 1
-							end
-							if nSteamShortcutsBefore ~= nSteamShortcutsAfter then
-								SerializeTableAsVDFFile(tSteamShortcuts, (S_PATH_RESOURCES .. S_INCLUDE_FILE_STEAM_SHORTCUTS))
-							end
-							tSteamShortcuts = nil
 						end
 					end
 				end
